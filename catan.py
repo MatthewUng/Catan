@@ -14,6 +14,33 @@ def toFraction(num):
          12:1}
     return Fraction(p[num], 36)
 
+def dots(num):
+    d = {2:1,
+         3:2,
+         4:3,
+         5:4,
+         6:5,
+         7:6,
+         8:5,
+         9:4,
+         10:3,
+         11:2,
+         12:1}
+    if isinstance(num, int):
+        return d[num]
+
+    elif ininstance(num, Fraction):
+        for i in range(1, 7):
+            if Fraction(i, 36) == num:
+                return i
+
+        print "error in dots(Fraction)"
+        return
+
+    else:
+        print "problem in dots()"
+        return
+
 class Catan:
     resources = ["wood", "brick", "wheat", "sheep", "rock"]
 
@@ -87,6 +114,23 @@ class Catan:
             for resource in Catan.resources:
                 self.count[player][resource] = Fraction(0)
                 self.rate[player][resource] = Fraction(0)
+
+    def incRate(self, player, resource, rate):
+        #0,0,2,6,1
+        offset = {5:0,
+                  4:0,
+                  3:2,
+                  2:6,
+                  1:1}
+
+        out = 0
+        temp = toFraction(rate)
+
+        if rate > 6:
+            out += Fraction(temp.denominator(),temp.numerator()) * Fraction(1,2)* temp
+        
+        out += offset[dots(rate)] * temp
+        return out
     
     def next(self):
         print "{} to move".format(self.players[self.turn])
