@@ -29,7 +29,7 @@ def dots(num):
     if isinstance(num, int):
         return d[num]
 
-    elif ininstance(num, Fraction):
+    elif isinstance(num, Fraction):
         for i in range(1, 7):
             if Fraction(i, 36) == num:
                 return i
@@ -49,73 +49,32 @@ class Catan:
         self.count = dict()
         self.rate = dict()
 
-        self.initPlayers()
         self.turn = 0
         
     def initGame(self):
-        for player in self.players:
-            print "\n{} to choose".format(player)
-            num = raw_input("how many adjacent resources?\n")
-
-            while not num.isdigit() or int(num) <0 or int(num) > 3 or int(num) == 7:
-                print "incorrect input.  Try again"
-                num = raw_input("how many adjacent resources?\n")
-
-            for _ in range(int(num)):
-                resource = raw_input("pick a resource:\n").lower().strip()
-
-                while resource not in Catan.resources:
-                    print "Not a valid resource.  Try again"
-                    resource = raw_input("pick a resource:\n").lower().strip()
-                
-                rate = raw_input("resource rate:\n").lower().strip()
-
-                while not rate.isdigit() or int(rate)<2 or int(rate) >12:
-                    rate = raw_input("resource rate:\n").lower().strip()
-
-                self.count[player][resource] += toFraction(int(rate))
-
-        for player in self.players[::-1]:
-            print "\n{} to choose".format(player)
-            num = raw_input("\nhow many adjacent resources?\n")
-
-            while not num.isdigit() or int(num) <0 or int(num) > 3 or int(num)==7:
-                print "incorrect input.  Try again"
-                num = raw_input("how many adjacent resources?\n")
-
-            for _ in range(int(num)):
-                resource = raw_input("pick a resource:\n").lower().strip()
-
-                while resource not in Catan.resources:
-                    print "Not a valid resource.  Try again"
-                    resource = raw_input("pick a resource:\n").lower().strip()
-                
-                rate = raw_input("resource rate:\n").lower().strip()
-
-                while not rate.isdigit() or int(rate)<2 or int(rate) >12:
-                    rate = raw_input("resource rate:\n").lower().strip()
-
-                self.count[player][resource] += toFraction(int(rate))
-
-    def initPlayers(self):
-        with open("players", 'r') as f:
+        with open("start", "r") as f:
             f.readline()
+            player = None
             for line in f:
-                self.players.append(line.strip())
+                temp = line.split()
+                if not temp:
+                    continue
 
-        if len(self.players) <3 or len(self.players) > 4:
-            print "not enough players"
-            exit()
+                elif len(temp) == 1:
+                    player = temp[0]
+                    self.players.append(player)
+                    self.rate[player] = dict()
+                    self.count[player] = dict()
 
-        for player in self.players:
-            self.count[player] = dict()
-            self.rate[player] = dict()
+                    for resource in Catan.resources:
+                        self.count[player][resource] = 0
+                        self.rate[player][resource] = Fraction(0)
 
-            for resource in Catan.resources:
-                self.count[player][resource] = Fraction(0)
-                self.rate[player][resource] = Fraction(0)
+                elif temp[0] in Catan.resources and temp[1].isdigit():
+                    self.startRate(player, temp[0], int(temp[1]))
+                    
 
-    def incRate(self, player, resource, rate):
+    def startRate(self, player, resource, rate):
         #0,0,2,6,1
         offset = {5:0,
                   4:0,
@@ -124,13 +83,20 @@ class Catan:
                   1:1}
 
         out = 0
-        temp = toFraction(rate)
+        rate = toFraction(rate)
+        try:
+            self.rate[player][resource] += rate
+
+        except:
+            print self.rate[player]
 
         if rate > 6:
-            out += Fraction(temp.denominator(),temp.numerator()) * Fraction(1,2)* temp
+            out += Fraction(temp.denominator,temp.numerator) * Fraction(1,2)* temp
         
-        out += offset[dots(rate)] * temp
-        return out
+        self.count[player][resource] += offset[dots(rate)] * rate
+
+    def incRate(self, player, resource, rate):
+        pass
     
     def next(self):
         print "{} to move".format(self.players[self.turn])
@@ -146,16 +112,25 @@ class Catan:
                     count -= 1
 
         
+    def test(self):
+        self.players = ["matt", "jp", "ansel"]
+
+
     def debug(self):
         print self.players
-        print "rates:"
-        for key, value in self.rate:
-            print key
-            print value
-        for key, value in self.count:
-            print key
-            print value
+        print "rates:\n"
+        for player, rate_dic in self.rate.items():
+            print player
+            for resource, rate in rate_dic.items():
+                print resource, rate
+            print ""
 
+        print "counts:\n"
+        for player, count_dic in self.count.items():
+            print player
+            for resource, count in count_dic.items():
+                print resource, count
+            print ""
 
 if __name__ == "__main__":
     game = Catan()
