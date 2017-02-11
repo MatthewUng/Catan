@@ -102,15 +102,24 @@ class Catan:
         self.count[player][resource] += offset[dots(rate)] * rate
 
     def incRate(self, player, resource, rate):
-        rate = toFraction(rate)
+        if isinstance(rate, int):
+            rate = toFraction(rate)
+
         self.rate[player][resource] += rate
 
-    def next(self):
+    def decRate(self, player, resource, rate):
+        if isinstance(rate, int):
+            rate = toFraction(rate)
+
+        self.rate[player][resource] -= rate
+
+    def turn(self):
         print "{} to move".format(self.players[self.turn])
         self.robbercount += self.robberrate
         if self.robbercount >=1:
             self.robbercount -= 1
             print "Robber activates!"
+            self.moveRobber()
 
         for player, value in self.rate.items():
             for resource, rate in value.items():
@@ -122,27 +131,33 @@ class Catan:
                     print "{0} receives a {1}".format(player, resource)
                     count -= 1
 
-    def moveRobber(self):
-        def step():
+    def choosePlayer(self):
+        player = raw_input("pick a player:\n")
+        while player not in self.players:
+            print "bad input"
             player = raw_input("pick a player:\n")
-            while player not in self.players:
-                print "bad input"
-                player = raw_input("pick a player:\n")
-
+        return player
+        
+    def chooseResource(self):
+        resource = raw_input("pick a resource:\n")
+        while resource not in Catan.resources:
+            print "bad input"
             resource = raw_input("pick a resource:\n")
-            while resource not in Catan.resources:
-                print "bad input"
-                resource = raw_input("pick a resource:\n")
-            
+
+        rate = raw_input("What is the number?\n")
+        while not rate.isdigit() or int(rate)<2 or int(rate)>12:
+            print "bad input"
             rate = raw_input("What is the number?\n")
 
-            while not rate.isdigit() or int(rate)<2 or int(rate)>12:
-                print "bad input"
-                rate = raw_input("What is the number?\n")
+        parse = Fraction(rate)
+        return [resource,rate]
 
-            parse = Fraction(rate)
-            return [player, resource, parse]           
-       
+    def choosePlayerResource(self):
+        player = self.chooseplayer()
+        resource, rate = self.chooseResource()
+        return [player, resource, rate]
+
+    def moveRobber(self):
         def reset():
             for choice in self.robbed:
                 player, resource, rate = choice
@@ -154,7 +169,7 @@ class Catan:
             reset()
 
         while True:
-            once = step()
+            once = self.choosePlayerResource()
             self.robbed.append(once)
             player, resource, rate = once
             self.rate[player][resource] -= rate
@@ -166,8 +181,12 @@ class Catan:
             if decision == "N":
                 break
 
+    def build(self):
+        player, resource, rate = self.choosePlayerResource()
+        self.rate[player][resource] += rate   
+
     def getCommand(self):
-        possible = ["next", "knight", "build"]
+        possible = ["next", "knight", "build", "add", "remove", "debug"]
         print "Possible commands: (next), (knight), (build)"
         command = raw_input()
         while command not in possible:
@@ -176,10 +195,44 @@ class Catan:
             command = raw_input()
 
         return command
-
+    
     def run(self):
-        while True:
 
+        while True:
+            self.turn += 1
+            print "Current turn {}".format(self.turn)
+            self.turn()
+
+            while True:
+                next_turn = self.getCommand()
+                if next_turn == "knight":
+                    print "Moving robber with the knight"
+                    self.moveRobber()
+                
+                elif next_turn == "build":
+                    print "building..."
+                    self.build()
+                
+                elif next_turn == "add":
+                    print "adding..."
+                    player, resource, rate = self.choosePlayerResource()
+                    self.incRate(player, resource, rate)
+
+                elif next_turn == "remove":
+                    print "removing..."
+                    player, resource, rate = self.choosePlayerResource()
+                    self.decRate(player, resource, rate)
+
+                elif next_turn == "debug":
+                    self.debug
+
+                elif next_turn == "next":
+                    break
+
+                else:
+                    print "error in run()"
+
+    
 
     def debug(self):
         print self.players
