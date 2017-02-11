@@ -1,4 +1,5 @@
 from fractions import *
+import random 
 
 def toFraction(num):
     p = {2:1,
@@ -49,9 +50,16 @@ class Catan:
         self.count = dict()
         self.rate = dict()
 
+        self.robbercount = Fraction(0)
+        self.robberrate = Fraction(1, 7)
+        self.robbed = list()
+
         self.turn = 0
+        self.curplayer = None
         
     def initGame(self):
+        self.robbercount += Fraction(random.randint(0,3), 7)
+
         with open("start", "r") as f:
             f.readline()
             player = None
@@ -62,6 +70,9 @@ class Catan:
 
                 elif len(temp) == 1:
                     player = temp[0]
+                    if not self.curplayer:
+                        self.curplayer = player
+
                     self.players.append(player)
                     self.rate[player] = dict()
                     self.count[player] = dict()
@@ -82,13 +93,8 @@ class Catan:
                   2:6,
                   1:1}
 
-        out = 0
         rate = toFraction(rate)
-        try:
-            self.rate[player][resource] += rate
-
-        except:
-            print self.rate[player]
+        self.rate[player][resource] += rate
 
         if rate > 6:
             out += Fraction(temp.denominator,temp.numerator) * Fraction(1,2)* temp
@@ -96,10 +102,15 @@ class Catan:
         self.count[player][resource] += offset[dots(rate)] * rate
 
     def incRate(self, player, resource, rate):
-        pass
-    
+        rate = toFraction(rate)
+        self.rate[player][resource] += rate
+
     def next(self):
         print "{} to move".format(self.players[self.turn])
+        self.robbercount += self.robberrate
+        if self.robbercount >=1:
+            self.robbercount -= 1
+            print "Robber activates!"
 
         for player, value in self.rate.items():
             for resource, rate in value.items():
@@ -111,9 +122,63 @@ class Catan:
                     print "{0} receives a {1}".format(player, resource)
                     count -= 1
 
-        
-    def test(self):
-        self.players = ["matt", "jp", "ansel"]
+    def moveRobber(self):
+        def step():
+            player = raw_input("pick a player:\n")
+            while player not in self.players:
+                print "bad input"
+                player = raw_input("pick a player:\n")
+
+            resource = raw_input("pick a resource:\n")
+            while resource not in Catan.resources:
+                print "bad input"
+                resource = raw_input("pick a resource:\n")
+            
+            rate = raw_input("What is the number?\n")
+
+            while not rate.isdigit() or int(rate)<2 or int(rate)>12:
+                print "bad input"
+                rate = raw_input("What is the number?\n")
+
+            parse = Fraction(rate)
+            return [player, resource, parse]           
+       
+        def reset():
+            for choice in self.robbed:
+                player, resource, rate = choice
+                self.rate[player][resource] += rate
+            
+            del self.robbed[:]
+
+        if self.robbed:
+            reset()
+
+        while True:
+            once = step()
+            self.robbed.append(once)
+            player, resource, rate = once
+            self.rate[player][resource] -= rate
+
+            decision = raw_input("Continue? Y/N\n")
+            while decision != "Y" and decision != "N":
+                print "bad input"
+                decision = raw_input("Continue? Y/N\n")
+            if decision == "N":
+                break
+
+    def getCommand(self):
+        possible = ["next", "knight", "build"]
+        print "Possible commands: (next), (knight), (build)"
+        command = raw_input()
+        while command not in possible:
+            print "bad input"
+            print "Possible commands: (next), (knight), (build)"
+            command = raw_input()
+
+        return command
+
+    def run(self):
+        while True:
 
 
     def debug(self):
@@ -131,6 +196,9 @@ class Catan:
             for resource, count in count_dic.items():
                 print resource, count
             print ""
+
+        print "robber stats"
+        print "count: {}".format(self.robbercount)
 
 if __name__ == "__main__":
     game = Catan()
