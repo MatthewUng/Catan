@@ -49,6 +49,14 @@ def dots(num):
         print "problem in dots()"
         return
 
+def prompt(p, error, allowed):
+    """prompts the user until user returns valid input"""
+    choice = raw_input(p)
+    while choice not in allowed:
+        print error
+        choice = raw_input(p)
+    return choice
+
 class Catan:
     resources = ["wood", "brick", "wheat", "sheep", "rock"]
 
@@ -103,13 +111,14 @@ class Catan:
                   2:6,
                   1:1}
 
-        rate = toFraction(rate)
-        self.rate[player][resource] += rate
+        frac = toFraction(rate)
+        self.rate[player][resource] += frac
 
         if rate > 6:
-            out += Fraction(temp.denominator,temp.numerator) * Fraction(1,2)* temp
+            self.count[player][resource] += Fraction(frac.denominator, 
+                                    frac.numerator) * Fraction(1,2)* frac
         
-        self.count[player][resource] += offset[dots(rate)] * rate
+        self.count[player][resource] += offset[dots(rate)] * frac
 
     def incRate(self, player, resource, rate):
         """increment the rate of a resource for a player"""
@@ -127,7 +136,8 @@ class Catan:
 
     def nextturn(self):
         """undergo a turn"""
-        print "{} to move".format(self.players[self.turn%len(self.players)])
+        print "*********************************************"
+        print "\n{} to move".format(self.players[self.turn%len(self.players)])
         self.robbercount += self.robberrate
         if self.robbercount >=1:
             self.robbercount -= 1
@@ -138,11 +148,13 @@ class Catan:
             for resource, rate in value.items():
                 self.count[player][resource] += rate
         
+        print ""
         for player, d in self.count.items():
             for resource, count in d.items():
-                while count > 1:
+                while d[resource] > 1:
                     print "{0} receives a {1}".format(player, resource)
-                    count -= 1
+                    self.count[player][resource] -= 1
+                    #print self.count[player][resource]
 
     def choosePlayer(self):
         """pick a player"""
@@ -187,6 +199,11 @@ class Catan:
             reset()
 
         while True:
+            choice = prompt("Rob someone? \n", "try again!", ['Y', 'y', 'N', 'n'])
+
+            if choice.lower() == 'n':
+                return 
+
             once = self.choosePlayerResource()
             self.robbed.append(once)
             player, resource, rate = once
@@ -197,21 +214,21 @@ class Catan:
                 print "bad input"
                 decision = raw_input("Continue? Y/N\n")
             if decision == "N":
-                break
+                return
 
     def build(self):
         """build more"""
         player, resource, rate = self.choosePlayerResource()
-        self.rate[player][resource] += rate   
+        self.rate[player][resource] += Fraction(rate)
 
     def getCommand(self):
         """gets a command"""
         possible = ["next", "knight", "build", "add", "remove", "debug"]
-        print "Possible commands: (next), (knight), (build)"
+        print "\nPossible commands: (next), (knight), (build)"
         command = raw_input()
         while command not in possible:
             print "bad input"
-            print "Possible commands: (next), (knight), (build)"
+            print "\nPossible commands: (next), (knight), (build)"
             command = raw_input()
 
         return command
@@ -220,7 +237,7 @@ class Catan:
         """runs indefinitely"""
         while True:
             self.turn += 1
-            print "Current turn {}".format(self.turn)
+            print "\n\nCurrent turn {}".format(self.turn)
             self.nextturn()
 
             while True:
