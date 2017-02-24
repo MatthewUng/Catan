@@ -125,14 +125,10 @@ class Catan:
     def getCommand(self):
         """gets a command"""
         possible = ["next", "knight", "build", "add", "remove", "debug"]
-        print "\nPossible commands: (next), (knight), (build)"
-        command = raw_input()
-        while command not in possible:
-            print "bad input"
-            print "\nPossible commands: (next), (knight), (build)"
-            command = raw_input()
+        command_prompt = "\nPossible commands: (next), (knight), (build)"
+        error = "bad input. Try again"
 
-        return command
+        return prompt(command_prompt, error, possible)
     
     def run(self):
         """runs indefinitely"""
