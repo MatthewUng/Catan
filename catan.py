@@ -9,6 +9,8 @@ def prompt(p, error, allowed):
     choice = raw_input(p)
     while choice not in allowed:
         print error
+        #print choice
+        #print allowed
         choice = raw_input(p)
     return choice
 
@@ -21,12 +23,12 @@ class Catan:
 
         self.resources = Resources("start")
         self.turn = 0
-        self.players = Resources.players()
+        self.players = self.resources.getplayers()
         self.curplayer = self.players[0]
         
         self.robbercount += Fraction(random.randint(0,3), 7)
         
-    def nextturn(self):
+    def next_turn(self):
         """undergo a turn"""
         print "*********************************************"
         print "\n{} to move".format(self.players[self.turn%len(self.players)])
@@ -38,19 +40,11 @@ class Catan:
             print "Robber activates!!!!"
             self.moveRobber()
 
-
-        # increment count based on current rate
-        for player, value in self.rate.items():
-            for resource, rate in value.items():
-                self.count[player][resource] += rate
-        
         # receiving resources
         print ""
-        for player, d in self.count.items():
-            for resource, count in d.items():
-                while d[resource] > 1:
-                    print "{0} receives a {1}".format(player, resource)
-                    self.count[player][resource] -= 1
+        playerResources = self.resources.resource_turn()
+        for pair in playerResources:
+            print "{0} receives a {1}".format(pair[0], pair[1])
 
     def choosePlayer(self):
         """pick a player"""
@@ -67,8 +61,8 @@ class Catan:
         resource = prompt(resource_prompt, error, RESOURCES)
 
         rate_prompt = "What is the number?[2-12]\n"
-        rate = prompt(rate_prompt, error, range(2, 13))
-        parse = Fraction(rate)
+        rate = prompt(rate_prompt, error, map(str, range(2, 13)))
+        parse = toFraction(rate)
 
         return [resource, parse]
 
@@ -85,7 +79,8 @@ class Catan:
             """helper to reset past robbed resources"""
             for choice in self.robbed:
                 player, resource, rate = choice
-                self.rate[player][resource] += rate
+                self.resources.incRate(player, resource, rate)
+                #self.rate[player][resource] += rate
             
             del self.robbed[:]
 
@@ -93,7 +88,7 @@ class Catan:
             reset()
 
         while True:
-            choice = prompt("Rob someone? \n", "try again!", ['Y', 'y', 'N', 'n'])
+            choice = prompt("Rob someone? \n", "try again!", yn)
 
             if choice.lower() == 'n':
                 return 
@@ -101,31 +96,30 @@ class Catan:
             once = self.choosePlayerResource()
             self.robbed.append(once)
             player, resource, rate = once
-            self.rate[player][resource] -= Fraction(rate)
+            self.resources.decRate(player, resource, rate)
 
-            decision = raw_input("Continue? Y/N\n")
-            while decision != "Y" and decision != "N":
-                print "bad input"
-                decision = raw_input("Continue? Y/N\n")
-            if decision == "N":
+            decision = prompt("Continue? Y/N\n", "bad input. Try again.", yn)
+            if decision.lower() == "n":
                 return
 
     def build(self):
         """build more"""
         while True:
             player, resource, rate = self.choosePlayerResource()
-            self.rate[player][resource] += Fraction(rate)
+            self.resources.incRate(player, resource, rate)
+
+            #self.rate[player][resource] += Fraction(rate)
             
             more_prompt = "build more? Y/N"
             error = "bad input"
-            more = prompt(more_prompt, error, ['Y', 'N', 'y', 'n']
+            more = prompt(more_prompt, error, yn)
             if more.lower() == 'n':
                 return
         
     def getCommand(self):
         """gets a command"""
         possible = ["next", "knight", "build", "add", "remove", "debug"]
-        command_prompt = "\nPossible commands: (next), (knight), (build)"
+        command_prompt = "\nPossible commands: (next), (knight), (build)\n"
         error = "bad input. Try again"
 
         return prompt(command_prompt, error, possible)
@@ -135,7 +129,7 @@ class Catan:
         while True:
             self.turn += 1
             print "\n\nCurrent turn {}".format(self.turn)
-            self.nextturn()
+            self.next_turn()
 
             while True:
                 next_turn = self.getCommand()
@@ -150,12 +144,12 @@ class Catan:
                 elif next_turn == "add":
                     print "adding..."
                     player, resource, rate = self.choosePlayerResource()
-                    self.incRate(player, resource, rate)
+                    self.resources.incRate(player, resource, rate)
 
                 elif next_turn == "remove":
                     print "removing..."
                     player, resource, rate = self.choosePlayerResource()
-                    self.decRate(player, resource, rate)
+                    self.resources.decRate(player, resource, rate)
 
                 elif next_turn == "debug":
                     self.debug()
@@ -169,13 +163,12 @@ class Catan:
     
     def debug(self):
         """debugging purposes"""
-        Resources.debug()
+        self.resources.debug()
 
         print "robber stats"
         print "count: {}".format(self.robbercount)
 
 if __name__ == "__main__":
     game = Catan()
-    game.initGame()
     game.run()
 
